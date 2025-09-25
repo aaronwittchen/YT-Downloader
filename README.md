@@ -11,6 +11,12 @@ cargo --version
 
 If not, install via [rustup](https://rustup.rs/).
 
+Run with cargo:
+
+```bash
+cargo run
+```
+
 ---
 
 ## Setup

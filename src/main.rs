@@ -1,4 +1,4 @@
-use dialoguer::{theme::ColorfulTheme, Select};
+use dialoguer::{theme::ColorfulTheme, Select, Confirm};
 use std::process::Command;
 use std::io::{self, Write};
 
@@ -7,6 +7,20 @@ fn main() {
     let setup_dir = base_dir.join("setup");
     let output_dir = base_dir.join("output");
     let ytdlp_path = setup_dir.join("yt-dlp.exe");
+
+    // ---- Auto-update yt-dlp at program start ----
+    println!("Updating yt-dlp to the latest version...");
+    let update_status = Command::new(&ytdlp_path)
+        .arg("-U")
+        .status()
+        .expect("Failed to run yt-dlp update");
+
+    if update_status.success() {
+        println!("yt-dlp updated successfully!\n");
+    } else {
+        println!("yt-dlp update failed. Continuing anyway...\n");
+    }
+    // --------------------------------------------
 
     if !output_dir.exists() {
         std::fs::create_dir_all(&output_dir).unwrap();
@@ -48,6 +62,17 @@ fn main() {
         (video_formats[format_selection], false)
     };
 
+    let also_subs = if !is_audio {
+        // Ask the user if they want subtitles for videos
+        Confirm::with_theme(&ColorfulTheme::default())
+            .with_prompt("Also download subtitles if available?")
+            .default(false)
+            .interact()
+            .unwrap()
+    } else {
+        false
+    };
+
     let mut command = Command::new(&ytdlp_path);
     command.current_dir(&output_dir);
 
@@ -68,6 +93,7 @@ fn main() {
             "webm" => "bestvideo[ext=webm]+bestaudio/best[ext=webm]/best",
             _ => "bestvideo+bestaudio/best",
         };
+
         command.args(&[
             "-f", format_str,
             "-ciw",
@@ -75,6 +101,14 @@ fn main() {
             "-v",
             url,
         ]);
+
+        if also_subs {
+            command.args(&[
+                "--write-subs",
+                "--sub-lang", "en",
+                "--sub-format", "srt",
+            ]);
+        }
     }
 
     let status = command.status().expect("Failed to run yt-dlp");
