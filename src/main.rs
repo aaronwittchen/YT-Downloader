@@ -1,4 +1,4 @@
-use dialoguer::{theme::ColorfulTheme, Select, Confirm};
+use dialoguer::{theme::ColorfulTheme, Select};
 use std::process::Command;
 use std::io::{self, Write};
 
@@ -26,7 +26,7 @@ fn main() {
         std::fs::create_dir_all(&output_dir).unwrap();
     }
 
-    let options = vec!["Audio", "Video"];
+    let options = vec!["Video", "Audio", "Subtitles"];
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Download type")
         .items(&options)
@@ -42,73 +42,83 @@ fn main() {
     io::stdin().read_line(&mut url).unwrap();
     let url = url.trim();
 
-    let (format_arg, is_audio) = if download_type == "Audio" {
-        let audio_formats = vec!["flac", "mp3", "wav", "aac", "m4a"];
-        let format_selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("Select audio format")
-            .items(&audio_formats)
-            .default(0)
-            .interact()
-            .unwrap();
-        (audio_formats[format_selection], true)
-    } else {
-        let video_formats = vec!["mp4", "mkv", "webm"];
-        let format_selection = Select::with_theme(&ColorfulTheme::default())
-            .with_prompt("Select video format")
-            .items(&video_formats)
-            .default(0)
-            .interact()
-            .unwrap();
-        (video_formats[format_selection], false)
-    };
-
-    let also_subs = if !is_audio {
-        // Ask the user if they want subtitles for videos
-        Confirm::with_theme(&ColorfulTheme::default())
-            .with_prompt("Also download subtitles if available?")
-            .default(false)
-            .interact()
-            .unwrap()
-    } else {
-        false
-    };
-
     let mut command = Command::new(&ytdlp_path);
     command.current_dir(&output_dir);
 
-    if is_audio {
-        command.args(&[
-            "-f", "bestaudio/best",
-            "-ciw",
-            "-o", "%(title)s.%(ext)s",
-            "-v",
-            "--extract-audio",
-            "--audio-format", format_arg,
-            url,
-        ]);
-    } else {
-        let format_str = match format_arg {
-            "mp4" => "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-            "mkv" => "bestvideo[ext=webm]+bestaudio/best[ext=mkv]/best",
-            "webm" => "bestvideo[ext=webm]+bestaudio/best[ext=webm]/best",
-            _ => "bestvideo+bestaudio/best",
-        };
+    match download_type {
+        "Audio" => {
+            let audio_formats = vec!["flac", "mp3", "wav", "aac", "m4a"];
+            let format_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select audio format")
+                .items(&audio_formats)
+                .default(0)
+                .interact()
+                .unwrap();
+            let format_arg = audio_formats[format_selection];
 
-        command.args(&[
-            "-f", format_str,
-            "-ciw",
-            "-o", "%(title)s.%(ext)s",
-            "-v",
-            url,
-        ]);
-
-        if also_subs {
             command.args(&[
-                "--write-subs",
-                "--sub-lang", "en",
-                "--sub-format", "srt",
+                "-f", "bestaudio/best",
+                "-ciw",
+                "-o", "%(title)s.%(ext)s",
+                "-v",
+                "--extract-audio",
+                "--audio-format", format_arg,
+                url,
             ]);
         }
+        "Video" => {
+            let video_formats = vec!["mp4", "mkv", "webm"];
+            let format_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select video format")
+                .items(&video_formats)
+                .default(0)
+                .interact()
+                .unwrap();
+            let format_arg = video_formats[format_selection];
+
+            let format_str = match format_arg {
+                "mp4" => "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+                "mkv" => "bestvideo[ext=webm]+bestaudio/best[ext=mkv]/best",
+                "webm" => "bestvideo[ext=webm]+bestaudio/best[ext=webm]/best",
+                _ => "bestvideo+bestaudio/best",
+            };
+
+            command.args(&[
+                "-f", format_str,
+                "-ciw",
+                "-o", "%(title)s.%(ext)s",
+                "-v",
+                url,
+            ]);
+        }
+        "Subtitles" => {
+            let subtitle_options = vec!["English", "All"];
+            let sub_selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select subtitle option")
+                .items(&subtitle_options)
+                .default(0)
+                .interact()
+                .unwrap();
+
+            let sub_choice = subtitle_options[sub_selection];
+
+            command.args(&[
+                "-ciw",
+                "-o", "%(title)s.%(ext)s",
+                "-v",
+                url,
+                "--skip-download",
+                "--write-subs",
+                "--sub-format", "srt",
+            ]);
+
+            if sub_choice == "English" {
+                command.args(&["--sub-lang", "en"]);
+            } else {
+                command.args(&["--all-subs"]);
+            }
+        }
+        _ => {}
     }
 
     let status = command.status().expect("Failed to run yt-dlp");
