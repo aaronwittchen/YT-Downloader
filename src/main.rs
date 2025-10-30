@@ -366,14 +366,12 @@ fn ui(f: &mut ratatui::Frame, app: &AppState) {
         ])
         .split(f.size());
 
-    // Title
     let title = Paragraph::new("YouTube Downloader")
         .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
         .alignment(Alignment::Center)
         .block(Block::default().borders(Borders::ALL));
     f.render_widget(title, chunks[0]);
 
-    // Info box
     let type_str = match app.download_type {
         Some(0) => "Video",
         Some(1) => "Audio",
@@ -430,7 +428,6 @@ fn ui(f: &mut ratatui::Frame, app: &AppState) {
         .block(Block::default().borders(Borders::ALL).title("Information"));
     f.render_widget(info, chunks[1]);
 
-    // Main content area
     match app.step {
         AppStep::SelectType => {
             let items: Vec<ListItem> = vec!["Video", "Audio", "Subtitles"]
@@ -549,7 +546,6 @@ fn ui(f: &mut ratatui::Frame, app: &AppState) {
         }
     };
 
-    // Help section
     let help_text = match app.step {
         AppStep::Complete => "Press 'r' to restart  |  Press 'q' to quit",
         AppStep::EnterUrl => "Type URL and press Enter",
