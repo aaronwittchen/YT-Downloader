@@ -1,5 +1,11 @@
 # YT Downloader CLI (Rust)
 
+![Rust](https://img.shields.io/badge/Rust-1.82%2B-orange?logo=rust)
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-informational)
+
+
 ## Requirements
 
 Make sure Rust is installed:
